@@ -197,7 +197,7 @@ def process_transcript(transcript, report_type):
                 "final_summary": final_summary,
                 "report_title": title_subtitle["title"],
                 "report_subtitle": title_subtitle["subtitle"],
-                "report_type": report_type  # Make sure this line is included
+                "report_type": report_type
             }
             
             try:
