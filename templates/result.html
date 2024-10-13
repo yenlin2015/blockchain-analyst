@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insights Machine Pro - Summary Result</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: #e2e8f0;
+            margin: 0;
+            padding: 20px;
+            background-color: #0f172a;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .panel {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            margin-bottom: 20px;
+            border-radius: 0.375rem;
+            overflow: hidden;
+        }
+        h1, h2 {
+            color: #60a5fa;
+        }
+        .tab {
+            display: flex;
+            background-color: #1e293b;
+            border-bottom: 1px solid #334155;
+            padding: 0.75rem;
+        }
+        .tab button {
+            background-color: #2d3748;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            padding: 0.75rem 1.5rem;
+            transition: 0.3s;
+            font-size: 17px;
+            color: #e2e8f0;
+            font-weight: 500;
+            border-radius: 0.375rem;
+            margin-right: 0.5rem;
+        }
+        .tab button:hover {
+            background-color: #3b82f6;
+        }
+        .tab button.active {
+            background-color: #3b82f6;
+            color: #ffffff;
+        }
+        .tabcontent {
+            display: none;
+            padding: 20px;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #2d3748;
+            padding: 15px;
+            border-radius: 0.25rem;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #3b82f6;
+            color: #ffffff;
+            text-decoration: none;
+            transition: background-color 0.3s;
+            font-size: 0.9rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background-color: #2563eb;
+        }
+        .report-type {
+            text-align: center;
+            font-size: 1.2em;
+            color: #60a5fa;
+            margin-bottom: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .summary-title {
+            color: #60a5fa;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .summary-subtitle {
+            color: #bae6fd; /* Brighter blue for better visibility */
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+        }
+        .summary-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.6;
+        }
+        .summary-content p {
+            margin-bottom: 1em;
+        }
+        .summary-content strong {
+            font-weight: 600;
+            color: #60a5fa;
+        }
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #1e293b;
+            overflow-y: auto;
+            border-right: 1px solid #334155;
+            padding: 1rem;
+        }
+        .main-content {
+            margin-left: 280px;
+            padding: 2rem;
+        }
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #334155;
+            cursor: pointer;
+        }
+        .history-item:hover {
+            background-color: #2d3748;
+        }
+        .history-title {
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+        .history-date {
+            font-size: 0.8rem;
+            color: #9ca3af;
+        }
+        .new-analysis-icon {
+            cursor: pointer;
+            color: #60a5fa;
+            font-size: 1.5rem;
+            transition: color 0.3s ease;
+        }
+        .new-analysis-icon:hover {
+            color: #3b82f6;
+        }
+        .chunk-summary {
+            background-color: #2d3748;
+            border-radius: 0.375rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .chunk-summary h3 {
+            color: #60a5fa;
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .chunk-content {
+            padding-left: 1rem;
+        }
+        .chunk-content ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .chunk-content li {
+            margin-bottom: 0.5rem;
+        }
+        .chunk-heading {
+            color: #60a5fa;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .indented-content {
+            padding-left: 1.5rem;
+            border-left: 2px solid #4a5568;
+            margin-bottom: 1rem;
+        }
+        .report-type {
+            font-size: 0.875rem;
+            color: #9ca3af;
+            text-align: right;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <div class="flex">
+        <div class="sidebar">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-blue-400">Query History</h2>
+                <i class="fas fa-plus-circle new-analysis-icon" onclick="window.location.href='/'" title="Start New Analysis"></i>
+            </div>
+            <div id="history-list">
+                {% for item in history %}
+                    <div class="history-item" onclick="window.location.href='/result/{{ item.id }}'">
+                        <p class="history-title">{{ item.report_title }}</p>
+                        <p class="history-date">{{ item.created_at }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="container mx-auto px-4">
+                <div class="header">
+                    <h1 class="text-3xl font-bold text-blue-400">Insights Machine Pro</h1>
+                    <button onclick="downloadPDF()" class="btn">Download PDF</button>
+                </div>
+                <div class="report-type">
+                    Report Type: {{ report_type if report_type else 'Not specified' }}
+                </div>
+                <div class="panel">
+                    <div class="tab">
+                        <button class="tablinks active" onclick="openTab(event, 'Transcript')">Transcript</button>
+                        <button class="tablinks" onclick="openTab(event, 'ChunkSummaries')">Chunk Summaries</button>
+                        <button class="tablinks" onclick="openTab(event, 'FinalSummary')">Final Summary</button>
+                    </div>
+
+                    <div id="Transcript" class="tabcontent" style="display:block;">
+                        <h2 class="text-2xl font-semibold text-blue-300">Original Transcript</h2>
+                        <pre class="whitespace-pre-wrap">{{ transcript }}</pre>
+                    </div>
+
+                    <div id="ChunkSummaries" class="tabcontent">
+                        <h2 class="text-2xl font-semibold text-blue-300 mb-4">Chunk Summaries</h2>
+                        {% for chunk in chunk_summaries %}
+                            <div class="chunk-summary">
+                                <h3 class="text-xl font-semibold">Chunk {{ loop.index }}</h3>
+                                <div class="chunk-content">
+                                    {{ chunk | format_summary | safe }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div id="FinalSummary" class="tabcontent">
+                        <h2 class="summary-title">{{ report_title }}</h2>
+                        <p class="summary-subtitle">{{ report_subtitle }}</p>
+                        <div class="summary-content">
+                            {{ final_summary | format_summary | safe }}
+                        </div>
+                    </div>
+                </div>
+                <a href="/" class="btn mt-4">Back to Home</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function openTab(evt, tabName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tabcontent");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tablinks");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+
+    function downloadPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setTextColor(226, 232, 240);
+        doc.setFillColor(26, 32, 44);
+        doc.rect(0, 0, doc.internal.pageSize.width, doc.internal.pageSize.height, 'F');
+        
+        // Add title and subtitle
+        doc.setFontSize(20);
+        doc.setTextColor(144, 205, 244);
+        doc.text("{{ report_title }}", 15, 20);
+        doc.setFontSize(14);
+        doc.setTextColor(203, 213, 224);
+        doc.text("{{ report_subtitle }}", 15, 30);
+        
+        // Add main content
+        doc.setFontSize(12);
+        doc.setTextColor(226, 232, 240);
+        const activeTab = document.querySelector('.tab button.active').textContent;
+        let content, filename;
+        
+        if (activeTab === 'First Summary') {
+            content = document.querySelector('#FirstSummary pre').textContent;
+            filename = 'first_summary.pdf';
+        } else if (activeTab === 'Second Summary') {
+            content = document.querySelector('#SecondSummary pre').textContent;
+            filename = 'second_summary.pdf';
+        } else {
+            content = document.querySelector('#FinalSummary pre').textContent;
+            filename = '{{ report_title|replace(" ", "_") }}.pdf';
+        }
+        
+        const splitText = doc.splitTextToSize(content, 180);
+        
+        let yOffset = 45;
+        splitText.forEach((line) => {
+            if (yOffset > 280) {
+                doc.addPage();
+                yOffset = 20;
+            }
+            doc.text(line, 15, yOffset);
+            yOffset += 7;
+        });
+        
+        doc.save(filename);
+    }
+    </script>
+</body>
+</html>
