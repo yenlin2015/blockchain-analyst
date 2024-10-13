@@ -1,4 +1,5 @@
 from flask import Flask, render_template, send_from_directory, Response, jsonify, request, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
 from QA_analyst import main as qa_main, split_text, summarize_chunk, extract_key_takeaways, generate_title_subtitle
 from youtube_transcriber import process_youtube_video, transcribe_audio_stream
 import json
@@ -11,6 +12,28 @@ import traceback
 import yt_dlp
 import whisper
 import re
+
+load_dotenv()
+
+app = Flask(__name__, static_folder='static')
+
+# Use the connection string format you provided
+DATABASE_URL = f"postgresql://postgres.oabafybqxkxpziadbmhk:{os.getenv('SUPABASE_KEY')}@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres"
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+# Define your models here
+class Analysis(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    report_title = db.Column(db.String(200), nullable=False)
+    report_subtitle = db.Column(db.String(200))
+    transcript = db.Column(db.Text, nullable=False)
+    final_summary = db.Column(db.Text, nullable=False)
+    chunk_summaries = db.Column(db.Text)  # Store as JSON string
+    report_type = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
 
 print("Current working directory:", os.getcwd())
 
@@ -25,8 +48,6 @@ if os.path.exists(env_path):
 else:
     print(".env file not found")
 
-load_dotenv()
-
 # Print environment variables for debugging
 print("SUPABASE_URL:", os.getenv("SUPABASE_URL"))
 print("SUPABASE_KEY:", os.getenv("SUPABASE_KEY"))
@@ -40,8 +61,6 @@ print("SUPABASE_KEY:", supabase_key)
 
 if not supabase_url or not supabase_key:
     raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in the .env file")
-
-app = Flask(__name__, static_folder='static')
 
 # Initialize Supabase client
 supabase: Client = create_client(supabase_url, supabase_key)
