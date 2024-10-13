@@ -96,10 +96,10 @@ def index():
         report_type = request.form.get('report_type')
         if input_type == 'text':
             transcript = request.form.get('transcript')
-            return Response(process_transcript(transcript, report_type), content_type='text/event-stream')
+            return process_transcript(transcript, report_type)
         elif input_type == 'youtube':
             youtube_link = request.form.get('youtube_link')
-            return Response(process_youtube_transcript(youtube_link, report_type), content_type='text/event-stream')
+            return process_youtube_transcript(youtube_link, report_type)
         else:
             return jsonify({"error": "Invalid input type"}), 400
     return render_template('index.html')
@@ -123,7 +123,7 @@ def process_youtube_transcript(youtube_link, report_type):
             logger.error(traceback.format_exc())
             yield "data: " + json.dumps({"status": "Error", "message": str(e)}) + "\n\n"
 
-    return generate()
+    return Response(stream_with_context(generate()), content_type='text/event-stream')
 
 @app.route('/get_history', methods=['GET'])
 def get_history():
