@@ -1,4 +1,4 @@
-from flask import Flask, render_template, send_from_directory, Response, jsonify, request, redirect, url_for
+from flask import Flask, render_template, send_from_directory, Response, jsonify, request, redirect, url_for, stream_with_context
 from flask_sqlalchemy import SQLAlchemy
 from QA_analyst import main as qa_main, split_text, summarize_chunk, extract_key_takeaways, generate_title_subtitle
 from youtube_transcriber import process_youtube_video, transcribe_audio_stream
@@ -12,6 +12,10 @@ import traceback
 import yt_dlp
 import whisper
 import re
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -49,15 +53,15 @@ else:
     print(".env file not found")
 
 # Print environment variables for debugging
-print("SUPABASE_URL:", os.getenv("SUPABASE_URL"))
-print("SUPABASE_KEY:", os.getenv("SUPABASE_KEY"))
+# print("SUPABASE_URL:", os.getenv("SUPABASE_URL"))
+# print("SUPABASE_KEY:", os.getenv("SUPABASE_KEY"))
 
 # Now try to get the variables
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
 
-print("SUPABASE_URL:", supabase_url)
-print("SUPABASE_KEY:", supabase_key)
+# print("SUPABASE_URL:", supabase_url)
+# print("SUPABASE_KEY:", supabase_key)
 
 if not supabase_url or not supabase_key:
     raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in the .env file")
@@ -115,8 +119,8 @@ def process_youtube_transcript(youtube_link, report_type):
             yield from process_transcript(full_transcript, report_type)
             
         except Exception as e:
-            print(f"Error in process_youtube_transcript: {str(e)}")
-            print(traceback.format_exc())
+            logger.error(f"Error in process_youtube_transcript: {str(e)}")
+            logger.error(traceback.format_exc())
             yield "data: " + json.dumps({"status": "Error", "message": str(e)}) + "\n\n"
 
     return generate()
@@ -146,8 +150,8 @@ def get_analysis(id):
         else:
             return jsonify({"error": "Analysis not found"}), 404
     except Exception as e:
-        print(f"Error in get_analysis: {str(e)}")
-        print(traceback.format_exc())
+        logger.error(f"Error in get_analysis: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 def process_transcript(transcript, report_type):
@@ -169,15 +173,8 @@ def process_transcript(transcript, report_type):
             
             yield "data: " + json.dumps({"status": "Extracting key takeaways"}) + "\n\n"
             
-            final_summary = extract_key_takeaways(chunk_summaries)
-            print("Final summary generated:", final_summary[:100] + "...")  # Debug print
-            
-            print("Generating title and subtitle...")  # Debug print
-            title_subtitle = generate_title_subtitle(final_summary)
-            
-            # Debug prints
-            print("Generated title:", title_subtitle.get("title", "No title generated"))
-            print("Generated subtitle:", title_subtitle.get("subtitle", "No subtitle generated"))
+            final_summary = extract_key_takeaways(chunk_summaries, report_type)
+            title_subtitle = generate_title_subtitle(final_summary, report_type)
             
             yield "data: " + json.dumps({
                 "status": "Complete", 
@@ -202,19 +199,18 @@ def process_transcript(transcript, report_type):
             
             try:
                 result = supabase.table("summaries").insert(data).execute()
-                print("Data inserted successfully:", result)
+                logger.info("Data inserted successfully:", result)
                 yield "data: " + json.dumps({"status": "Data saved to database"}) + "\n\n"
             except Exception as e:
-                error_message = str(e)
-                print("Error inserting data into Supabase:", error_message)
-                yield "data: " + json.dumps({"status": "Error saving data", "error": error_message}) + "\n\n"
+                logger.error(f"Error inserting data into Supabase: {str(e)}")
+                yield "data: " + json.dumps({"status": "Error saving data", "error": str(e)}) + "\n\n"
 
         except Exception as e:
-            print(f"Error in process_transcript: {str(e)}")
-            print(traceback.format_exc())
+            logger.error(f"Error in process_transcript: {str(e)}")
+            logger.error(traceback.format_exc())
             yield "data: " + json.dumps({"status": "Error", "message": str(e)}) + "\n\n"
 
-    return generate()
+    return Response(stream_with_context(generate()), content_type='text/event-stream')
 
 @app.route('/debug/list_analyses')
 def list_analyses():
@@ -249,8 +245,8 @@ def result(id):
                                report_type=report_type,
                                history=history)
     except Exception as e:
-        print(f"Error in result route: {str(e)}")
-        print(traceback.format_exc())
+        logger.error(f"Error in result route: {str(e)}")
+        logger.error(traceback.format_exc())
         return "An error occurred", 500
 
 @app.template_filter('format_summary')
