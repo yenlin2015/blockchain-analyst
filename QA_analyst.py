@@ -3,6 +3,11 @@ from openai import OpenAI
 import json
 import traceback
 from dotenv import load_dotenv
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -137,18 +142,28 @@ def generate_title_subtitle(summary, report_type="analyst", model="gpt-4", max_t
     return {"title": "Comprehensive Analysis Report", "subtitle": "Detailed summary and key insights from your transcript"}
 
 def main(transcript, report_type):
+    logger.info("Starting main function")
+    
     # Step 1: Split the text into manageable chunks
     chunks = split_text(transcript)
+    logger.info(f"Split transcript into {len(chunks)} chunks")
     
     # Step 2: First round summarization for each chunk
-    chunk_summaries = [summarize_chunk(chunk) for chunk in chunks]
+    chunk_summaries = []
+    for i, chunk in enumerate(chunks):
+        logger.info(f"Summarizing chunk {i+1}/{len(chunks)}")
+        summary = summarize_chunk(chunk)
+        chunk_summaries.append(summary)
     
     # Step 3: Second round summarization to extract key takeaways
+    logger.info("Extracting key takeaways")
     final_summary = extract_key_takeaways(chunk_summaries, report_type)
     
     # Step 4: Generate title and subtitle
+    logger.info("Generating title and subtitle")
     title_subtitle = generate_title_subtitle(final_summary, report_type)
     
+    logger.info("Main function completed")
     return {
         'chunk_summaries': chunk_summaries,
         'final_summary': final_summary,
