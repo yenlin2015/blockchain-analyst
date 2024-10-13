@@ -3,12 +3,19 @@ from openai import OpenAI
 import json
 import traceback
 from dotenv import load_dotenv
+import tiktoken
 
 # Load environment variables
 load_dotenv()
 
 # Initialize the OpenAI client with your API key
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+def num_tokens_from_string(string: str, encoding_name: str = "cl100k_base") -> int:
+    """Returns the number of tokens in a text string."""
+    encoding = tiktoken.get_encoding(encoding_name)
+    num_tokens = len(encoding.encode(string))
+    return num_tokens
 
 def split_text(text, max_size=6000):
     """Splits text into chunks that are less than max_size tokens."""
@@ -29,7 +36,7 @@ def split_text(text, max_size=6000):
         chunks.append(" ".join(current_chunk))
     return chunks
 
-def summarize_chunk(text, model="gpt-4", max_tokens=2000):
+def summarize_chunk(text, model="gpt-4", max_tokens=2000, max_input_tokens=6000):
     """First round summarization: Summarize the text focusing on key takeaways with details."""
     prompt = (
         "As a professional blockchain analyst, your task is to summarize the following text. "
@@ -46,6 +53,18 @@ def summarize_chunk(text, model="gpt-4", max_tokens=2000):
         "...\n\n"
         "Be concise but thorough, and maintain a professional tone throughout."
     )
+    
+    # Calculate tokens
+    prompt_tokens = num_tokens_from_string(prompt)
+    text_tokens = num_tokens_from_string(text)
+    
+    if prompt_tokens + text_tokens > max_input_tokens:
+        # Split the text and summarize in parts
+        mid_point = len(text) // 2
+        first_half = summarize_chunk(text[:mid_point], model, max_tokens, max_input_tokens)
+        second_half = summarize_chunk(text[mid_point:], model, max_tokens, max_input_tokens)
+        combined_summary = first_half + "\n\n" + second_half
+        return summarize_chunk(combined_summary, model, max_tokens, max_input_tokens)
     
     response = client.chat.completions.create(
         model=model,
